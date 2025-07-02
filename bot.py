@@ -31,6 +31,7 @@ import keyboards as kb
 import media
 import power
 import prefs
+import record
 import stats
 import sysinfo
 from config import AUTO_SNAP_MINUTES, BOT_TOKEN, DATA_DIR, OWNER_IDS
@@ -243,6 +244,19 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await _edit(update, t("ask_exec", lang), kb.back_only(lang, "menu:more"))
     elif data == "more:autotoggle":
         await _cb_auto_toggle(update, context, lang)
+
+    # --- запись видео/аудио ---
+    elif data == "menu:record":
+        await _edit(update, t("title_record", lang), kb.record_menu(lang))
+    elif data == "rec:vmenu":
+        await _edit(update, t("title_rec_vdur", lang), kb.rec_duration_menu(lang, "v"))
+    elif data == "rec:amenu":
+        await _edit(update, t("title_rec_adur", lang), kb.rec_duration_menu(lang, "a"))
+    elif data.startswith("rec:v:"):
+        await _cb_record_video(update, context, int(data.split(":")[2]), lang)
+    elif data.startswith("rec:a:"):
+        await _cb_record_audio(update, context, int(data.split(":")[2]), lang)
+
     else:
         await q.answer(t("unknown_cmd", lang), show_alert=False)
 
@@ -271,6 +285,34 @@ async def _cb_webcam(update: Update, context: ContextTypes.DEFAULT_TYPE, lang: s
     with path.open("rb") as f:
         await context.bot.send_photo(
             update.effective_chat.id, photo=f, caption=t("cap_webcam", lang),
+            reply_markup=kb.main_menu(lang),
+        )
+
+
+async def _cb_record_video(update: Update, context: ContextTypes.DEFAULT_TYPE, sec: int, lang: str) -> None:
+    await _edit(update, t("rec_working", lang, sec=sec), kb.back_only(lang, "menu:record"))
+    stats.bump("rec_video", str(sec))
+    path = await asyncio.to_thread(record.record_video, sec)
+    if path is None:
+        await context.bot.send_message(update.effective_chat.id, t("webcam_none", lang), reply_markup=kb.main_menu(lang))
+        return
+    with path.open("rb") as f:
+        await context.bot.send_video(
+            update.effective_chat.id, video=f, caption=t("rec_video_cap", lang, sec=sec),
+            reply_markup=kb.main_menu(lang),
+        )
+
+
+async def _cb_record_audio(update: Update, context: ContextTypes.DEFAULT_TYPE, sec: int, lang: str) -> None:
+    await _edit(update, t("rec_working", lang, sec=sec), kb.back_only(lang, "menu:record"))
+    stats.bump("rec_audio", str(sec))
+    path = await asyncio.to_thread(record.record_audio, sec)
+    if path is None:
+        await context.bot.send_message(update.effective_chat.id, t("rec_no_mic", lang), reply_markup=kb.main_menu(lang))
+        return
+    with path.open("rb") as f:
+        await context.bot.send_voice(
+            update.effective_chat.id, voice=f, caption=t("rec_audio_cap", lang, sec=sec),
             reply_markup=kb.main_menu(lang),
         )
 

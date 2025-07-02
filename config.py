@@ -33,8 +33,9 @@ AUTO_SNAP_MINUTES = int(os.environ.get("AUTO_SNAP_MINUTES", "30") or "30")
 CAPTURES_DIR = BASE_DIR / "captures"
 WEBCAM_DIR = CAPTURES_DIR / "webcam"
 SCREENSHOT_DIR = CAPTURES_DIR / "screenshots"
+REC_DIR = CAPTURES_DIR / "recordings"
 DATA_DIR = BASE_DIR / "data"
 STATS_FILE = DATA_DIR / "stats.json"
 
-for _d in (WEBCAM_DIR, SCREENSHOT_DIR, DATA_DIR):
+for _d in (WEBCAM_DIR, SCREENSHOT_DIR, REC_DIR, DATA_DIR):
     _d.mkdir(parents=True, exist_ok=True)
