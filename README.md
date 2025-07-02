@@ -21,6 +21,7 @@ control sound and media, lock the screen, and much more.
 | 🔊 **Sound/Media** | volume ±, mute, play/pause, next/previous |
 | 🔒 **Screen/Sleep** | lock, sleep, turn monitors off |
 | ⚡ **Power** | shutdown/reboot (with confirmation), shutdown in 15 min + cancel |
+| 🌐 **Language** | switch UI language on the fly (English / Russian / Czech) |
 | 🛠 **More** | webcam gallery, text-to-speech, launch URL/app, arbitrary PowerShell command |
 
 ## 🔐 Access & Security
@@ -40,6 +41,12 @@ Additionally:
 - The bot only does outbound polling — no open inbound ports.
 - All access denials are logged.
 
+## 🌐 Localization
+
+The interface is available in **English (default)**, **Russian** and **Czech**, switchable
+right in the bot (🌐 Language). The choice is per-user and persisted in `data/prefs.json`.
+Demo mode is shown in English by default. Strings live in `i18n.py`.
+
 ## 🧩 Architecture
 
 The bot runs **natively on Windows** (it needs access to the GUI session for screenshots,
@@ -54,7 +61,8 @@ Telegram  ──polling──>  bot.py (Windows, Python)
                           ├─ dockerinfo.py wsl.exe docker ...  ──>  WSL2 Ubuntu
                           ├─ media.py      volume/media/TTS/commands
                           ├─ admins.py     owners + admin registration
-                          └─ demo.py       demo mode on fake data
+                          ├─ demo.py       demo mode on fake data
+                          └─ i18n.py/prefs.py  en/ru/cs strings + per-user language
 ```
 
 Dependencies are minimal and compatible with Python 3.14: `python-telegram-bot`, `mss`,

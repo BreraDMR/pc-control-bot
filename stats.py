@@ -5,6 +5,7 @@ import time
 from datetime import datetime, timedelta
 
 from config import STATS_FILE
+from i18n import t
 
 _lock = threading.Lock()
 _START = time.time()
@@ -37,26 +38,26 @@ def bump(action: str, meta: str = "") -> None:
         _save(data)
 
 
-def text() -> str:
+def text(lang: str = "en") -> str:
     with _lock:
         data = _load()
     uptime = timedelta(seconds=int(time.time() - _START))
     lines = [
-        "📊 <b>Статистика бота</b>",
-        f"⏱ Бот работает: <b>{uptime}</b>",
-        f"🔢 Всего действий: <b>{data.get('total', 0)}</b>",
+        t("stats_head", lang),
+        t("stats_uptime", lang, u=uptime),
+        t("stats_total", lang, n=data.get("total", 0)),
         "",
-        "<b>По типам:</b>",
+        t("stats_by_type", lang),
     ]
     counters = data.get("counters", {})
     if counters:
         for name, cnt in sorted(counters.items(), key=lambda x: -x[1]):
             lines.append(f"• {name}: {cnt}")
     else:
-        lines.append("• пока пусто")
+        lines.append(t("stats_empty", lang))
     last = data.get("last_actions", [])
     if last:
-        lines.append("\n<b>Последние действия:</b>")
+        lines.append("\n" + t("stats_recent", lang))
         for e in last[:8]:
             meta = f" ({e['meta']})" if e.get("meta") else ""
             lines.append(f"• {e['t']} — {e['action']}{meta}")

@@ -2,6 +2,8 @@
 
 Владельцы (OWNER_IDS из .env) — «железные» админы, их нельзя удалить.
 Остальные админы регистрируются по запросу и хранятся в data/admins.json."""
+from __future__ import annotations
+
 import json
 import threading
 from datetime import datetime

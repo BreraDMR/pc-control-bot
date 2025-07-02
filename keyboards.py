@@ -1,156 +1,168 @@
-"""Инлайн-клавиатуры (всё управление кнопками, без / команд)."""
+"""Инлайн-клавиатуры (всё управление кнопками). Все подписи локализованы через i18n."""
 from telegram import InlineKeyboardButton as B
 from telegram import InlineKeyboardMarkup as M
 
-
-def _back(to: str = "menu:main") -> B:
-    return B("◀️ Назад", callback_data=to)
+from i18n import LANG_NAMES, t
 
 
-def main_menu() -> M:
+def _back(lang: str, to: str = "menu:main") -> B:
+    return B(t("btn_back", lang), callback_data=to)
+
+
+def main_menu(lang: str) -> M:
     return M(
         [
-            [B("🖥 Статус ПК", callback_data="act:status"),
-             B("📊 Стата бота", callback_data="act:botstats")],
-            [B("📸 Скриншот", callback_data="act:screenshot"),
-             B("📷 Вебка", callback_data="act:webcam")],
-            [B("🐳 Docker", callback_data="menu:docker"),
-             B("⚙️ Процессы", callback_data="menu:proc")],
-            [B("🔊 Звук/Медиа", callback_data="menu:sound"),
-             B("🔒 Экран/Сон", callback_data="menu:screen")],
-            [B("⚡ Питание", callback_data="menu:power"),
-             B("🛠 Ещё", callback_data="menu:more")],
+            [B(t("btn_status", lang), callback_data="act:status"),
+             B(t("btn_botstats", lang), callback_data="act:botstats")],
+            [B(t("btn_screenshot", lang), callback_data="act:screenshot"),
+             B(t("btn_webcam", lang), callback_data="act:webcam")],
+            [B(t("btn_docker", lang), callback_data="menu:docker"),
+             B(t("btn_proc", lang), callback_data="menu:proc")],
+            [B(t("btn_sound", lang), callback_data="menu:sound"),
+             B(t("btn_screen", lang), callback_data="menu:screen")],
+            [B(t("btn_power", lang), callback_data="menu:power"),
+             B(t("btn_more", lang), callback_data="menu:more")],
         ]
     )
 
 
-def power_menu() -> M:
+def power_menu(lang: str) -> M:
     return M(
         [
-            [B("⏻ Выключить", callback_data="power:shutdown"),
-             B("🔁 Перезагрузить", callback_data="power:reboot")],
-            [B("⏳ Выключить через 15 мин", callback_data="power:shutdown15")],
-            [B("❌ Отменить выключение", callback_data="power:abort")],
-            [_back()],
+            [B(t("btn_shutdown", lang), callback_data="power:shutdown"),
+             B(t("btn_reboot", lang), callback_data="power:reboot")],
+            [B(t("btn_shutdown15", lang), callback_data="power:shutdown15")],
+            [B(t("btn_abort", lang), callback_data="power:abort")],
+            [_back(lang)],
         ]
     )
 
 
-def confirm_menu(action: str, label: str) -> M:
+def confirm_menu(lang: str, action: str) -> M:
+    label_key = "btn_confirm_shutdown" if action == "shutdown" else "btn_confirm_reboot"
     return M(
         [
-            [B(f"✅ Да, {label}", callback_data=f"confirm:{action}")],
-            [B("◀️ Отмена", callback_data="menu:power")],
+            [B(t(label_key, lang), callback_data=f"confirm:{action}")],
+            [B(t("btn_cancel", lang), callback_data="menu:power")],
         ]
     )
 
 
-def screen_menu() -> M:
+def screen_menu(lang: str) -> M:
     return M(
         [
-            [B("🔒 Заблокировать", callback_data="screen:lock"),
-             B("😴 Сон", callback_data="screen:sleep")],
-            [B("🌙 Мониторы выкл", callback_data="screen:monoff")],
-            [_back()],
+            [B(t("btn_lock", lang), callback_data="screen:lock"),
+             B(t("btn_sleep", lang), callback_data="screen:sleep")],
+            [B(t("btn_monoff", lang), callback_data="screen:monoff")],
+            [_back(lang)],
         ]
     )
 
 
-def sound_menu() -> M:
+def sound_menu(lang: str) -> M:
     return M(
         [
             [B("🔉 −", callback_data="sound:down"),
-             B("🔇 Mute", callback_data="sound:mute"),
+             B(t("btn_mute", lang), callback_data="sound:mute"),
              B("🔊 +", callback_data="sound:up")],
             [B("⏮", callback_data="sound:prev"),
              B("⏯", callback_data="sound:play"),
              B("⏭", callback_data="sound:next")],
-            [_back()],
+            [_back(lang)],
         ]
     )
 
 
-def proc_menu() -> M:
+def proc_menu(lang: str) -> M:
     return M(
         [
-            [B("🔥 Топ CPU", callback_data="proc:cpu"),
-             B("🧠 Топ RAM", callback_data="proc:ram")],
-            [_back()],
+            [B(t("btn_topcpu", lang), callback_data="proc:cpu"),
+             B(t("btn_topram", lang), callback_data="proc:ram")],
+            [_back(lang)],
         ]
     )
 
 
-def docker_menu(containers: list[dict]) -> M:
+def docker_menu(lang: str, containers: list[dict]) -> M:
     rows = []
+    suffix = t("logs_suffix", lang)
     for c in containers:
         icon = "✅" if c["state"] == "running" else "⛔"
-        rows.append([B(f"{icon} {c['name']} — логи", callback_data=f"docker:logs:{c['name']}")])
-    rows.append([B("🔄 Обновить", callback_data="menu:docker")])
-    rows.append([_back()])
+        rows.append([B(f"{icon} {c['name']} — {suffix}", callback_data=f"docker:logs:{c['name']}")])
+    rows.append([B(t("btn_refresh", lang), callback_data="menu:docker")])
+    rows.append([_back(lang)])
     return M(rows)
 
 
-def more_menu(auto_on: bool = False, is_owner: bool = False) -> M:
-    auto = "🟢 Автоснимки: ВКЛ" if auto_on else "⚪️ Автоснимки: ВЫКЛ"
+def more_menu(lang: str, auto_on: bool = False, is_owner: bool = False) -> M:
+    auto = t("btn_auto_on", lang) if auto_on else t("btn_auto_off", lang)
     rows = [
-        [B("🖼 Галерея вебки", callback_data="more:gallery")],
-        [B("🗣 Озвучить текст", callback_data="more:tts")],
-        [B("🌐 Открыть URL/приложение", callback_data="more:url")],
-        [B("💻 Выполнить команду", callback_data="more:exec")],
+        [B(t("btn_gallery", lang), callback_data="more:gallery")],
+        [B(t("btn_tts", lang), callback_data="more:tts")],
+        [B(t("btn_url", lang), callback_data="more:url")],
+        [B(t("btn_exec", lang), callback_data="more:exec")],
         [B(auto, callback_data="more:autotoggle")],
+        [B(t("btn_language", lang), callback_data="menu:lang")],
     ]
     if is_owner:
-        rows.append([B("👥 Админы", callback_data="menu:admins")])
-    rows.append([_back()])
+        rows.append([B(t("btn_admins", lang), callback_data="menu:admins")])
+    rows.append([_back(lang)])
     return M(rows)
 
 
-def back_only(to: str = "menu:main") -> M:
-    return M([[_back(to)]])
+def language_menu(lang: str, back_to: str = "menu:more") -> M:
+    rows = [[B(name, callback_data=f"lang:set:{code}")] for code, name in LANG_NAMES.items()]
+    rows.append([_back(lang, back_to)])
+    return M(rows)
+
+
+def back_only(lang: str, to: str = "menu:main") -> M:
+    return M([[_back(lang, to)]])
 
 
 # ── гость / демо / регистрация / админы ──────────────────────────────────
-def guest_menu() -> M:
+def guest_menu(lang: str) -> M:
     return M(
         [
-            [B("🎬 Посмотреть демо", callback_data="guest:demo")],
-            [B("🔐 Запросить доступ", callback_data="guest:request")],
+            [B(t("btn_demo", lang), callback_data="guest:demo")],
+            [B(t("btn_request", lang), callback_data="guest:request")],
+            [B(t("btn_language", lang), callback_data="guest:lang")],
         ]
     )
 
 
-def demo_menu() -> M:
+def demo_menu(lang: str) -> M:
     return M(
         [
-            [B("🖥 Статус ПК", callback_data="demo:status"),
-             B("📊 Стата бота", callback_data="demo:botstats")],
-            [B("📸 Скриншот", callback_data="demo:photo"),
-             B("📷 Вебка", callback_data="demo:photo")],
-            [B("🐳 Docker", callback_data="demo:docker"),
-             B("⚙️ Процессы", callback_data="demo:proc")],
-            [B("⚡ Питание", callback_data="demo:action"),
-             B("🔊 Звук/Медиа", callback_data="demo:action")],
-            [B("🔐 Запросить доступ", callback_data="guest:request")],
-            [B("◀️ Закрыть демо", callback_data="guest:home")],
+            [B(t("btn_status", lang), callback_data="demo:status"),
+             B(t("btn_botstats", lang), callback_data="demo:botstats")],
+            [B(t("btn_screenshot", lang), callback_data="demo:photo"),
+             B(t("btn_webcam", lang), callback_data="demo:photo")],
+            [B(t("btn_docker", lang), callback_data="demo:docker"),
+             B(t("btn_proc", lang), callback_data="demo:proc")],
+            [B(t("btn_power", lang), callback_data="demo:action"),
+             B(t("btn_sound", lang), callback_data="demo:action")],
+            [B(t("btn_request", lang), callback_data="guest:request")],
+            [B(t("btn_close_demo", lang), callback_data="guest:home")],
         ]
     )
 
 
-def approval_menu(user_id: int) -> M:
+def approval_menu(lang: str, user_id: int) -> M:
     return M(
         [
-            [B("✅ Одобрить", callback_data=f"approve:{user_id}"),
-             B("🚫 Отклонить", callback_data=f"deny:{user_id}")],
+            [B(t("btn_approve", lang), callback_data=f"approve:{user_id}"),
+             B(t("btn_deny", lang), callback_data=f"deny:{user_id}")],
         ]
     )
 
 
-def admins_menu(admin_list: list[dict]) -> M:
+def admins_menu(lang: str, admin_list: list[dict]) -> M:
     rows = []
     for a in admin_list:
         if a.get("owner"):
             continue  # владельцев удалять нельзя
         label = a.get("name") or str(a["id"])
         rows.append([B(f"🗑 {label} ({a['id']})", callback_data=f"admin:rm:{a['id']}")])
-    rows.append([_back("menu:more")])
+    rows.append([_back(lang, "menu:more")])
     return M(rows)

@@ -3,6 +3,7 @@ import json
 import subprocess
 
 from config import WSL_DISTRO
+from i18n import t
 
 NO_WINDOW = 0x08000000
 
@@ -44,12 +45,12 @@ def list_containers() -> list[dict]:
     return items
 
 
-def overview_text() -> str:
+def overview_text(lang: str = "en") -> str:
     items = list_containers()
     if not items:
-        return "🐳 Контейнеры не найдены или docker недоступен из WSL."
+        return t("docker_unavailable", lang)
     running = [c for c in items if c["state"] == "running"]
-    lines = [f"🐳 <b>Docker</b> — запущено {len(running)}/{len(items)}", ""]
+    lines = [t("docker_head", lang, r=len(running), n=len(items)), ""]
     for c in sorted(items, key=lambda x: x["state"] != "running"):
         icon = "✅" if c["state"] == "running" else "⛔"
         if "unhealthy" in c["status"].lower():
@@ -57,13 +58,13 @@ def overview_text() -> str:
         lines.append(f"{icon} <b>{c['name']}</b>\n    <i>{c['status']}</i>")
     problems = [c for c in items if c["state"] != "running"]
     if problems:
-        lines.append("\n⚠️ Не запущены: " + ", ".join(c["name"] for c in problems))
+        lines.append("\n" + t("docker_not_running", lang) + ", ".join(c["name"] for c in problems))
     return "\n".join(lines)
 
 
-def logs(name: str, tail: int = 30) -> str:
+def logs(name: str, tail: int = 30, lang: str = "en") -> str:
     r = _wsl(["docker", "logs", "--tail", str(tail), name])
     out = (r.stdout or "").strip()
     err = (r.stderr or "").strip()
     combined = (out + "\n" + err).strip() if err else out
-    return combined or "(логи пусты)"
+    return combined or t("logs_empty", lang)

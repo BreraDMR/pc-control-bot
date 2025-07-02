@@ -2,6 +2,8 @@
 
 Вебка сделана через ffmpeg из imageio-ffmpeg, чтобы не тянуть opencv
 (у которого на Python 3.14 может не быть колёс)."""
+from __future__ import annotations
+
 import re
 import subprocess
 from datetime import datetime
