@@ -1,0 +1,17 @@
+# Секреты и данные — никогда не коммитим
+.env
+data/
+captures/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# ОС/редакторы
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
