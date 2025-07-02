@@ -172,6 +172,10 @@ STR: dict[str, dict[str, str]] = {
         "cs": "🎤 Mikrofon nenalezen. Připoj mikrofon a zkus to znovu.",
     },
     "rec_failed": {"en": "⚠️ Recording failed.", "ru": "⚠️ Не удалось записать.", "cs": "⚠️ Nahrávání selhalo."},
+    "cam_label": {"en": "Camera", "ru": "Камера", "cs": "Kamera"},
+    "title_camera": {"en": "📷 <b>Choose camera</b>\nThe active camera is used for photos and video.", "ru": "📷 <b>Выбор камеры</b>\nАктивная камера используется для фото и видео.", "cs": "📷 <b>Volba kamery</b>\nAktivní kamera se použije pro foto i video."},
+    "cam_none": {"en": "📷 No cameras connected.", "ru": "📷 Камеры не подключены.", "cs": "📷 Nejsou připojeny žádné kamery."},
+    "cam_selected": {"en": "✅ Camera: {name}", "ru": "✅ Камера: {name}", "cs": "✅ Kamera: {name}"},
 
     # ── старт / уведомления ───────────────────────────────────────────────
     "startup": {"en": "🟢 <b>PC booted, bot is online.</b>\n\n", "ru": "🟢 <b>ПК загружен, бот на связи.</b>\n\n", "cs": "🟢 <b>PC nastartoval, bot je online.</b>\n\n"},

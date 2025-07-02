@@ -1,4 +1,6 @@
 """Инлайн-клавиатуры (всё управление кнопками). Все подписи локализованы через i18n."""
+from __future__ import annotations
+
 from telegram import InlineKeyboardButton as B
 from telegram import InlineKeyboardMarkup as M
 
@@ -114,14 +116,25 @@ def more_menu(lang: str, auto_on: bool = False, is_owner: bool = False) -> M:
 REC_DURATIONS = (5, 10, 15, 30, 60)
 
 
-def record_menu(lang: str) -> M:
+def record_menu(lang: str, camera_name: str | None = None) -> M:
+    cam = camera_name or "—"
     return M(
         [
             [B(t("btn_rec_video", lang), callback_data="rec:vmenu")],
             [B(t("btn_rec_audio", lang), callback_data="rec:amenu")],
+            [B(f"📷 {t('cam_label', lang)}: {cam}", callback_data="cam:menu")],
             [_back(lang, "menu:more")],
         ]
     )
+
+
+def camera_menu(lang: str, cameras: list[str], selected: str | None) -> M:
+    rows = []
+    for idx, name in enumerate(cameras):
+        mark = "✅ " if name == selected else ""
+        rows.append([B(f"{mark}{name}", callback_data=f"cam:set:{idx}")])
+    rows.append([_back(lang, "menu:record")])
+    return M(rows)
 
 
 def rec_duration_menu(lang: str, kind: str) -> M:

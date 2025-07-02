@@ -5,6 +5,8 @@
 TTS, запуск URL/команд, авто-снимки вебки, выбор языка (en/ru/cs).
 
 Доступ строго по OWNER_IDS + подтверждённым админам (см. security)."""
+from __future__ import annotations
+
 import asyncio
 import html
 import logging
@@ -32,6 +34,7 @@ import media
 import power
 import prefs
 import record
+import settings
 import stats
 import sysinfo
 from config import AUTO_SNAP_MINUTES, BOT_TOKEN, DATA_DIR, OWNER_IDS
@@ -59,6 +62,15 @@ async def _global_error_handler(update: object, context: ContextTypes.DEFAULT_TY
 # ── helpers ──────────────────────────────────────────────────────────────
 def _lang(update: Update) -> str:
     return prefs.get_lang(update.effective_user.id if update.effective_user else None)
+
+
+def _resolve_camera() -> tuple[str | None, list[str]]:
+    """Вернуть (активная камера, список всех). Активная = выбранная, если подключена, иначе первая."""
+    cams = record.list_cameras()
+    if not cams:
+        return None, []
+    sel = settings.get_camera()
+    return (sel if sel in cams else cams[0]), cams
 
 
 async def _edit(update: Update, text: str, markup) -> None:
@@ -247,7 +259,12 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     # --- запись видео/аудио ---
     elif data == "menu:record":
-        await _edit(update, t("title_record", lang), kb.record_menu(lang))
+        cam, _cams = await asyncio.to_thread(_resolve_camera)
+        await _edit(update, t("title_record", lang), kb.record_menu(lang, cam))
+    elif data == "cam:menu":
+        await _cb_camera_menu(update, context, lang)
+    elif data.startswith("cam:set:"):
+        await _cb_camera_set(update, context, int(data.split(":")[2]), lang)
     elif data == "rec:vmenu":
         await _edit(update, t("title_rec_vdur", lang), kb.rec_duration_menu(lang, "v"))
     elif data == "rec:amenu":
@@ -276,7 +293,8 @@ async def _cb_screenshot(update: Update, context: ContextTypes.DEFAULT_TYPE, lan
 async def _cb_webcam(update: Update, context: ContextTypes.DEFAULT_TYPE, lang: str) -> None:
     await update.callback_query.answer(t("ans_webcam", lang))
     stats.bump("webcam")
-    path = await asyncio.to_thread(capture.webcam_snapshot)
+    cam, _cams = await asyncio.to_thread(_resolve_camera)
+    path = await asyncio.to_thread(capture.webcam_snapshot, cam)
     if path is None:
         await context.bot.send_message(
             update.effective_chat.id, t("webcam_none", lang), reply_markup=kb.main_menu(lang)
@@ -289,10 +307,30 @@ async def _cb_webcam(update: Update, context: ContextTypes.DEFAULT_TYPE, lang: s
         )
 
 
+async def _cb_camera_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, lang: str) -> None:
+    cam, cams = await asyncio.to_thread(_resolve_camera)
+    if not cams:
+        await _edit(update, t("cam_none", lang), kb.back_only(lang, "menu:record"))
+        return
+    await _edit(update, t("title_camera", lang), kb.camera_menu(lang, cams, cam))
+
+
+async def _cb_camera_set(update: Update, context: ContextTypes.DEFAULT_TYPE, idx: int, lang: str) -> None:
+    cams = await asyncio.to_thread(record.list_cameras)
+    if 0 <= idx < len(cams):
+        settings.set_camera(cams[idx])
+        stats.bump("camera_set", cams[idx])
+        await update.callback_query.answer(t("cam_selected", lang, name=cams[idx]))
+    sel = settings.get_camera()
+    active = sel if sel in cams else (cams[0] if cams else None)
+    await _edit(update, t("title_camera", lang), kb.camera_menu(lang, cams, active))
+
+
 async def _cb_record_video(update: Update, context: ContextTypes.DEFAULT_TYPE, sec: int, lang: str) -> None:
     await _edit(update, t("rec_working", lang, sec=sec), kb.back_only(lang, "menu:record"))
     stats.bump("rec_video", str(sec))
-    path = await asyncio.to_thread(record.record_video, sec)
+    cam, _cams = await asyncio.to_thread(_resolve_camera)
+    path = await asyncio.to_thread(record.record_video, sec, cam)
     if path is None:
         await context.bot.send_message(update.effective_chat.id, t("webcam_none", lang), reply_markup=kb.main_menu(lang))
         return
@@ -481,7 +519,8 @@ async def on_owner_cb(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
 # ── фоновые задачи / старт ──────────────────────────────────────────────
 async def auto_snap_job(context: ContextTypes.DEFAULT_TYPE) -> None:
-    path = await asyncio.to_thread(capture.webcam_snapshot)
+    cam, _cams = await asyncio.to_thread(_resolve_camera)
+    path = await asyncio.to_thread(capture.webcam_snapshot, cam)
     if path is None:
         return
     for oid in OWNER_IDS:
