@@ -1,53 +1,108 @@
-"""Звук/медиа и запуск команд на Windows — без сторонних зависимостей.
+"""Звук/медиа и запуск команд на Windows.
 
-Громкость и медиа управляются через виртуальные мультимедийные клавиши
-(keybd_event), TTS — через System.Speech PowerShell, произвольные команды —
-через PowerShell (доступно только владельцу, см. security.restricted)."""
+Громкость управляется через Core Audio API (pycaw/IAudioEndpointVolume) —
+это задаёт системную громкость напрямую, не завися от фокуса окна.
+Медиа (play/pause/next/prev) — через System Media Transport Controls (SMTC):
+команда идёт прямо в активную медиасессию (YouTube в браузере, плеер и т.п.).
+SMTC вызывается в ОТДЕЛЬНОМ процессе (mediactl.py) с таймаутом — winrt на
+py3.14 может нативно упасть/зависнуть, и изоляция не даёт уронить бот. Если
+дочерний процесс не справился, откатываемся на мультимедиа-клавишу.
+TTS — через System.Speech, произвольные команды — через PowerShell."""
+import asyncio  # noqa: F401  (оставлено для совместимости импортов)
 import base64
 import ctypes
+import logging
+import os
 import subprocess
+import sys
+from ctypes import POINTER, cast
+
+from comtypes import CLSCTX_ALL, CoInitialize
+from pycaw.pycaw import (
+    AudioUtilities,
+    EDataFlow,
+    ERole,
+    IAudioEndpointVolume,
+)
+
+log = logging.getLogger("pc-control-bot")
 
 NO_WINDOW = 0x08000000
 KEYEVENTF_KEYUP = 0x0002
+KEYEVENTF_EXTENDEDKEY = 0x0001
+VOL_STEP = 0.02  # доля громкости (0..1) на один «шаг»
 
-VK = {
-    "vol_up": 0xAF,
-    "vol_down": 0xAE,
-    "mute": 0xAD,
-    "play": 0xB3,
-    "next": 0xB0,
-    "prev": 0xB1,
-}
+_MEDIA_VK = {"play": 0xB3, "next": 0xB0, "prev": 0xB1}
+_HELPER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mediactl.py")
 
 
-def _tap(vk: int, times: int = 1) -> None:
-    for _ in range(times):
-        ctypes.windll.user32.keybd_event(vk, 0, 0, 0)
-        ctypes.windll.user32.keybd_event(vk, 0, KEYEVENTF_KEYUP, 0)
+# --- Громкость через Core Audio (pycaw) -----------------------------------
+def _endpoint():
+    CoInitialize()
+    enum = AudioUtilities.GetDeviceEnumerator()
+    dev = enum.GetDefaultAudioEndpoint(EDataFlow.eRender.value, ERole.eMultimedia.value)
+    ptr = dev.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+    return cast(ptr, POINTER(IAudioEndpointVolume))
+
+
+def _add_volume(delta: float) -> None:
+    try:
+        v = _endpoint()
+        if v.GetMute():
+            v.SetMute(0, None)
+        new = min(1.0, max(0.0, v.GetMasterVolumeLevelScalar() + delta))
+        v.SetMasterVolumeLevelScalar(new, None)
+    except Exception:
+        log.exception("volume change failed")
 
 
 def volume_up(steps: int = 4) -> None:
-    _tap(VK["vol_up"], steps)
+    _add_volume(steps * VOL_STEP)
 
 
 def volume_down(steps: int = 4) -> None:
-    _tap(VK["vol_down"], steps)
+    _add_volume(-steps * VOL_STEP)
 
 
 def mute() -> None:
-    _tap(VK["mute"])
+    try:
+        v = _endpoint()
+        v.SetMute(0 if v.GetMute() else 1, None)
+    except Exception:
+        log.exception("mute toggle failed")
+
+
+# --- Медиа через SMTC в отдельном процессе, откат на мультимедиа-клавиши ---
+def _tap(vk: int) -> None:
+    ctypes.windll.user32.keybd_event(vk, 0, KEYEVENTF_EXTENDEDKEY, 0)
+    ctypes.windll.user32.keybd_event(vk, 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0)
+
+
+def _media(action: str) -> None:
+    ok = False
+    try:
+        r = subprocess.run(
+            [sys.executable, _HELPER, action],
+            timeout=8,
+            creationflags=NO_WINDOW,
+        )
+        ok = r.returncode == 0
+    except Exception:
+        log.exception("SMTC helper failed for %s", action)
+    if not ok:
+        _tap(_MEDIA_VK[action])
 
 
 def media_playpause() -> None:
-    _tap(VK["play"])
+    _media("play")
 
 
 def media_next() -> None:
-    _tap(VK["next"])
+    _media("next")
 
 
 def media_prev() -> None:
-    _tap(VK["prev"])
+    _media("prev")
 
 
 def speak(text: str) -> None:
