@@ -106,6 +106,9 @@ schtasks /Create /TN "PC Control Bot" /SC ONLOGON ^
 | `WSL_DISTRO` | WSL distro with docker (empty = default) |
 | `AUTO_SNAP_MINUTES` | webcam auto-snapshot interval (default 30) |
 
-## 📄 License
+## License
 
-MIT.
+Licensed under [PolyForm Noncommercial 1.0.0](LICENSE) — free for personal,
+educational, and other noncommercial use. Commercial use requires a separate
+license; contact damir.brera.eb@gmail.com.
+
