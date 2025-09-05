@@ -1,4 +1,16 @@
+<div align="center">
+
 # 🎛 PC Control Bot
+
+**A Telegram remote for a headless Windows PC — power, screenshots, webcam, Docker and media, all through buttons, and only for the owner.**
+
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white&style=for-the-badge)](requirements.txt)
+[![python-telegram-bot](https://img.shields.io/badge/python--telegram--bot-21.x-2CA5E0?logo=telegram&logoColor=white&style=for-the-badge)](requirements.txt)
+[![Windows](https://img.shields.io/badge/Windows-0078D6?logo=windows&logoColor=white&style=for-the-badge)](#requirements)
+[![psutil](https://img.shields.io/badge/psutil-system%20metrics-4B8BBE?style=for-the-badge)](requirements.txt)
+[![WSL2](https://img.shields.io/badge/WSL2-Docker%20status-E95420?logo=ubuntu&logoColor=white&style=for-the-badge)](#-features)
+
+</div>
 
 A Telegram bot for remotely controlling a personal Windows PC — **everything via buttons**,
 no typed commands. It can shut down / reboot the machine, take a desktop screenshot and a
