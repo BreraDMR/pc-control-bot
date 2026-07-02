@@ -1,67 +1,66 @@
 # 🎛 PC Control Bot
 
-Телеграм-бот для удалённого управления личным Windows-ПК — **всё кнопками**, без ввода команд.
-Умеет выключать/перезагружать машину, снимать скриншот рабочего стола и фото с веб-камеры,
-показывать статус Docker-контейнеров (которые крутятся в WSL2), топ процессов, управлять
-звуком и медиа, блокировать экран и многое другое.
+A Telegram bot for remotely controlling a personal Windows PC — **everything via buttons**,
+no typed commands. It can shut down / reboot the machine, take a desktop screenshot and a
+webcam photo, show the status of Docker containers (running in WSL2), list top processes,
+control sound and media, lock the screen, and much more.
 
-> Задуман для «безголового» ПК под столом, доступного по Tailscale/SSH: телефон в руке —
-> и ты полностью управляешь машиной.
+> Built for a headless under-the-desk PC reachable over Tailscale/SSH: phone in hand —
+> and you fully control the machine.
 
-## ✨ Возможности
+## ✨ Features
 
-| Раздел | Что делает |
+| Section | What it does |
 |---|---|
-| 🖥 **Статус ПК** | CPU, RAM, диски, аптайм |
-| 📊 **Статистика бота** | сколько раз что нажимали, аптайм бота, журнал действий |
-| 📸 **Скриншот** | снимок всех мониторов, сохраняется в `captures/screenshots` |
-| 📷 **Вебка** | кадр с USB-камеры в `captures/webcam`; авто-снимки по расписанию |
-| 🐳 **Docker** | список контейнеров (✅/⛔/⚠️) + хвост логов любого |
-| ⚙️ **Процессы** | топ по CPU и по RAM |
-| 🔊 **Звук/Медиа** | громкость ±, mute, play/pause, вперёд/назад |
-| 🔒 **Экран/Сон** | блокировка, сон, выключение мониторов |
-| ⚡ **Питание** | выключение/перезагрузка (с подтверждением), выключение через 15 мин + отмена |
-| 🛠 **Ещё** | галерея вебки, TTS «озвучить текст», запуск URL/приложения, произвольная PowerShell-команда |
+| 🖥 **PC status** | CPU, RAM, disks, uptime |
+| 📊 **Bot stats** | how many times each action was used, bot uptime, action log |
+| 📸 **Screenshot** | snapshot of all monitors, saved to `captures/screenshots` |
+| 📷 **Webcam** | frame from a USB camera into `captures/webcam`; scheduled auto-snapshots |
+| 🐳 **Docker** | container list (✅/⛔/⚠️) + tail of any container's logs |
+| ⚙️ **Processes** | top by CPU and by RAM |
+| 🔊 **Sound/Media** | volume ±, mute, play/pause, next/previous |
+| 🔒 **Screen/Sleep** | lock, sleep, turn monitors off |
+| ⚡ **Power** | shutdown/reboot (with confirmation), shutdown in 15 min + cancel |
+| 🛠 **More** | webcam gallery, text-to-speech, launch URL/app, arbitrary PowerShell command |
 
-## 🔐 Доступ и безопасность
+## 🔐 Access & Security
 
-Управлять ПК может **только владелец** — модель доступа многоуровневая:
+Only the owner can control the PC — the access model is layered:
 
-- **Владельцы** (`OWNER_IDS` в `.env`) — «железные» админы с полным доступом, включая
-  выдачу и отзыв прав. Их нельзя удалить из бота.
-- **Админы** — регистрируются по запросу: гость жмёт «🔐 Запросить доступ», владелец
-  подтверждает кнопкой. Хранятся в `data/admins.json`.
-- **Гость** — любой другой пользователь видит только экран приветствия с кнопками
-  **🎬 Демо** (показывает интерфейс на вымышленных данных, без реального управления) и
-  **🔐 Запросить доступ**.
+- **Owners** (`OWNER_IDS` in `.env`) — hard-wired admins with full access, including granting
+  and revoking rights. They cannot be removed from the bot.
+- **Admins** — registered on request: a guest taps "🔐 Request access", an owner approves with
+  a button. Stored in `data/admins.json`.
+- **Guest** — any other user sees only a welcome screen with **🎬 Demo** (shows the interface
+  on fake data, with no real control) and **🔐 Request access**.
 
-Дополнительно:
-- Токен и список владельцев живут в `.env`, который **не попадает в git** (см. `.gitignore`).
-- Опасные действия (выключение/перезагрузка) требуют подтверждения «Да».
-- Бот работает только на исходящем polling — открытых входящих портов нет.
-- Все отказы в доступе логируются.
+Additionally:
+- The token and owner list live in `.env`, which is **never committed** (see `.gitignore`).
+- Dangerous actions (shutdown/reboot) require a "Yes" confirmation.
+- The bot only does outbound polling — no open inbound ports.
+- All access denials are logged.
 
-## 🧩 Архитектура
+## 🧩 Architecture
 
-Бот запускается **нативно в Windows** (нужен доступ к GUI-сессии для скриншота, камеры и
-питания). Docker-контейнеры при этом живут в **WSL2**, поэтому их статус бот получает через
-`wsl.exe docker ...`.
+The bot runs **natively on Windows** (it needs access to the GUI session for screenshots,
+the camera and power control). The Docker containers, meanwhile, live in **WSL2**, so their
+status is queried via `wsl.exe docker ...`.
 
 ```
 Telegram  ──polling──>  bot.py (Windows, Python)
-                          ├─ power.py      shutdown / reboot / lock / sleep / мониторы
-                          ├─ capture.py    mss (скриншот) + ffmpeg/dshow (вебка)
-                          ├─ sysinfo.py    psutil (CPU/RAM/диски/процессы)
+                          ├─ power.py      shutdown / reboot / lock / sleep / monitors
+                          ├─ capture.py    mss (screenshot) + ffmpeg/dshow (webcam)
+                          ├─ sysinfo.py    psutil (CPU/RAM/disks/processes)
                           ├─ dockerinfo.py wsl.exe docker ...  ──>  WSL2 Ubuntu
-                          ├─ media.py      громкость/медиа/TTS/команды
-                          ├─ admins.py     владельцы + регистрация админов
-                          └─ demo.py       демо-режим на вымышленных данных
+                          ├─ media.py      volume/media/TTS/commands
+                          ├─ admins.py     owners + admin registration
+                          └─ demo.py       demo mode on fake data
 ```
 
-Зависимости минимальны и совместимы с Python 3.14: `python-telegram-bot`, `mss`, `Pillow`,
-`psutil`, `imageio-ffmpeg` (вебка через ffmpeg — без тяжёлого opencv).
+Dependencies are minimal and compatible with Python 3.14: `python-telegram-bot`, `mss`,
+`Pillow`, `psutil`, `imageio-ffmpeg` (webcam via ffmpeg — no heavyweight opencv).
 
-## 🚀 Установка (Windows)
+## 🚀 Setup (Windows)
 
 ```powershell
 git clone https://github.com/BreraDMR/pc-control-bot.git
@@ -70,33 +69,33 @@ py -m venv .venv
 .venv\Scripts\python -m pip install -r requirements.txt
 
 copy .env.example .env
-notepad .env          # вписать BOT_TOKEN и OWNER_IDS
+notepad .env          # fill in BOT_TOKEN and OWNER_IDS
 
-.venv\Scripts\python test_capabilities.py   # самопроверка
-.venv\Scripts\python bot.py                 # запуск
+.venv\Scripts\python test_capabilities.py   # self-check
+.venv\Scripts\python bot.py                 # run
 ```
 
-Свой Telegram ID можно узнать у [@userinfobot](https://t.me/userinfobot).
+You can find your own Telegram ID via [@userinfobot](https://t.me/userinfobot).
 
-### Автозапуск при входе в систему
+### Autostart at logon
 
-Скриншот и вебка требуют интерактивной сессии, поэтому бот запускается **при входе
-пользователя** через Планировщик заданий:
+Screenshots and the webcam require an interactive session, so the bot starts **at user
+logon** via Task Scheduler:
 
 ```powershell
 schtasks /Create /TN "PC Control Bot" /SC ONLOGON ^
   /TR "\"%CD%\.venv\Scripts\pythonw.exe\" \"%CD%\bot.py\"" /RL LIMITED /F
 ```
 
-## ⚙️ Настройки `.env`
+## ⚙️ `.env` settings
 
-| Переменная | Назначение |
+| Variable | Purpose |
 |---|---|
-| `BOT_TOKEN` | токен от @BotFather |
-| `OWNER_IDS` | ID владельцев через запятую |
-| `WSL_DISTRO` | дистрибутив WSL с docker (пусто = по умолчанию) |
-| `AUTO_SNAP_MINUTES` | интервал авто-снимков вебки (по умолчанию 30) |
+| `BOT_TOKEN` | token from @BotFather |
+| `OWNER_IDS` | owner IDs, comma-separated |
+| `WSL_DISTRO` | WSL distro with docker (empty = default) |
+| `AUTO_SNAP_MINUTES` | webcam auto-snapshot interval (default 30) |
 
-## 📄 Лицензия
+## 📄 License
 
 MIT.
