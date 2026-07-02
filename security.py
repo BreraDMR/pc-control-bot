@@ -9,7 +9,9 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 import admins
+import prefs
 import stats
+from i18n import t
 
 log = logging.getLogger(__name__)
 
@@ -28,7 +30,7 @@ def restricted(func):
         if not admins.is_admin(uid):
             log.warning("ОТКАЗ (не админ): %s", _deny_meta(update))
             stats.bump("denied", meta=str(uid))
-            await _reject(update, "⛔ Нет доступа. Запроси доступ у владельца или открой демо.")
+            await _reject(update, t("no_access_alert", prefs.get_lang(uid)))
             return
         return await func(update, context, *args, **kwargs)
 
@@ -44,7 +46,7 @@ def owner_only(func):
         if not admins.is_owner(uid):
             log.warning("ОТКАЗ (не владелец): %s", _deny_meta(update))
             stats.bump("denied_owner", meta=str(uid))
-            await _reject(update, "⛔ Только для владельца.")
+            await _reject(update, t("owner_only_alert", prefs.get_lang(uid)))
             return
         return await func(update, context, *args, **kwargs)
 
