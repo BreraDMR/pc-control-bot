@@ -16,6 +16,7 @@ control sound and media, lock the screen, and much more.
 | 📊 **Bot stats** | how many times each action was used, bot uptime, action log |
 | 📸 **Screenshot** | snapshot of all monitors, saved to `captures/screenshots` |
 | 📷 **Webcam** | frame from a USB camera into `captures/webcam`; scheduled auto-snapshots |
+| 🎥 **Record** | short webcam video (+mic) and mic-only audio clips sent to Telegram; pick the length (5–60 s) |
 | 🐳 **Docker** | container list (✅/⛔/⚠️) + tail of any container's logs |
 | ⚙️ **Processes** | top by CPU and by RAM |
 | 🔊 **Sound/Media** | volume ±, mute, play/pause, next/previous |
@@ -57,6 +58,7 @@ status is queried via `wsl.exe docker ...`.
 Telegram  ──polling──>  bot.py (Windows, Python)
                           ├─ power.py      shutdown / reboot / lock / sleep / monitors
                           ├─ capture.py    mss (screenshot) + ffmpeg/dshow (webcam)
+                          ├─ record.py     ffmpeg/dshow short video (H.264) + mic audio (Opus)
                           ├─ sysinfo.py    psutil (CPU/RAM/disks/processes)
                           ├─ dockerinfo.py wsl.exe docker ...  ──>  WSL2 Ubuntu
                           ├─ media.py      volume/media/TTS/commands

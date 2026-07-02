@@ -156,6 +156,23 @@ STR: dict[str, dict[str, str]] = {
         "cs": "🟢 Auto-snímky webkamery zapnuty (každých {n} min).",
     },
 
+    # ── запись видео/аудио ────────────────────────────────────────────────
+    "btn_record": {"en": "🎥 Record", "ru": "🎥 Запись", "cs": "🎥 Nahrávka"},
+    "title_record": {"en": "🎥 <b>Record</b>\nChoose what to capture.", "ru": "🎥 <b>Запись</b>\nВыбери, что снять.", "cs": "🎥 <b>Nahrávka</b>\nVyber, co zachytit."},
+    "btn_rec_video": {"en": "🎥 Video (cam+mic)", "ru": "🎥 Видео (вебка+микро)", "cs": "🎥 Video (kamera+mikro)"},
+    "btn_rec_audio": {"en": "🎤 Audio (mic)", "ru": "🎤 Аудио (микро)", "cs": "🎤 Zvuk (mikrofon)"},
+    "title_rec_vdur": {"en": "🎥 <b>Video</b> — choose length:", "ru": "🎥 <b>Видео</b> — выбери длительность:", "cs": "🎥 <b>Video</b> — vyber délku:"},
+    "title_rec_adur": {"en": "🎤 <b>Audio</b> — choose length:", "ru": "🎤 <b>Аудио</b> — выбери длительность:", "cs": "🎤 <b>Zvuk</b> — vyber délku:"},
+    "rec_working": {"en": "⏺ Recording {sec}s… please wait", "ru": "⏺ Записываю {sec} сек… подожди", "cs": "⏺ Nahrávám {sec}s… počkej"},
+    "rec_video_cap": {"en": "🎥 {sec}s clip", "ru": "🎥 Клип {sec} сек", "cs": "🎥 Klip {sec}s"},
+    "rec_audio_cap": {"en": "🎤 {sec}s audio", "ru": "🎤 Аудио {sec} сек", "cs": "🎤 Zvuk {sec}s"},
+    "rec_no_mic": {
+        "en": "🎤 No microphone found. Connect a mic and try again.",
+        "ru": "🎤 Микрофон не найден. Подключи микрофон и попробуй снова.",
+        "cs": "🎤 Mikrofon nenalezen. Připoj mikrofon a zkus to znovu.",
+    },
+    "rec_failed": {"en": "⚠️ Recording failed.", "ru": "⚠️ Не удалось записать.", "cs": "⚠️ Nahrávání selhalo."},
+
     # ── старт / уведомления ───────────────────────────────────────────────
     "startup": {"en": "🟢 <b>PC booted, bot is online.</b>\n\n", "ru": "🟢 <b>ПК загружен, бот на связи.</b>\n\n", "cs": "🟢 <b>PC nastartoval, bot je online.</b>\n\n"},
     "language_set": {"en": "✅ Language set: {lang}", "ru": "✅ Язык установлен: {lang}", "cs": "✅ Jazyk nastaven: {lang}"},

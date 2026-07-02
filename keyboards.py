@@ -97,6 +97,7 @@ def docker_menu(lang: str, containers: list[dict]) -> M:
 def more_menu(lang: str, auto_on: bool = False, is_owner: bool = False) -> M:
     auto = t("btn_auto_on", lang) if auto_on else t("btn_auto_off", lang)
     rows = [
+        [B(t("btn_record", lang), callback_data="menu:record")],
         [B(t("btn_gallery", lang), callback_data="more:gallery")],
         [B(t("btn_tts", lang), callback_data="more:tts")],
         [B(t("btn_url", lang), callback_data="more:url")],
@@ -108,6 +109,25 @@ def more_menu(lang: str, auto_on: bool = False, is_owner: bool = False) -> M:
         rows.append([B(t("btn_admins", lang), callback_data="menu:admins")])
     rows.append([_back(lang)])
     return M(rows)
+
+
+REC_DURATIONS = (5, 10, 15, 30, 60)
+
+
+def record_menu(lang: str) -> M:
+    return M(
+        [
+            [B(t("btn_rec_video", lang), callback_data="rec:vmenu")],
+            [B(t("btn_rec_audio", lang), callback_data="rec:amenu")],
+            [_back(lang, "menu:more")],
+        ]
+    )
+
+
+def rec_duration_menu(lang: str, kind: str) -> M:
+    # kind: 'v' (video) | 'a' (audio)
+    row = [B(f"{s}s", callback_data=f"rec:{kind}:{s}") for s in REC_DURATIONS]
+    return M([row, [_back(lang, "menu:record")]])
 
 
 def language_menu(lang: str, back_to: str = "menu:more") -> M:
