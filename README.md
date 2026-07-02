@@ -16,7 +16,7 @@ control sound and media, lock the screen, and much more.
 | 📊 **Bot stats** | how many times each action was used, bot uptime, action log |
 | 📸 **Screenshot** | snapshot of all monitors, saved to `captures/screenshots` |
 | 📷 **Webcam** | frame from a USB camera into `captures/webcam`; scheduled auto-snapshots |
-| 🎥 **Record** | short webcam video (+mic) and mic-only audio clips sent to Telegram; pick the length (5–60 s) |
+| 🎥 **Record** | short webcam video (+mic) and mic-only audio clips sent to Telegram; pick the length (5–60 s) and, if several cameras are connected, the source camera |
 | 🐳 **Docker** | container list (✅/⛔/⚠️) + tail of any container's logs |
 | ⚙️ **Processes** | top by CPU and by RAM |
 | 🔊 **Sound/Media** | volume ±, mute, play/pause, next/previous |
