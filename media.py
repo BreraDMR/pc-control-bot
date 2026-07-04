@@ -1,108 +1,61 @@
 """Звук/медиа и запуск команд на Windows.
 
-Громкость управляется через Core Audio API (pycaw/IAudioEndpointVolume) —
-это задаёт системную громкость напрямую, не завися от фокуса окна.
-Медиа (play/pause/next/prev) — через System Media Transport Controls (SMTC):
-команда идёт прямо в активную медиасессию (YouTube в браузере, плеер и т.п.).
-SMTC вызывается в ОТДЕЛЬНОМ процессе (mediactl.py) с таймаутом — winrt на
-py3.14 может нативно упасть/зависнуть, и изоляция не даёт уронить бот. Если
-дочерний процесс не справился, откатываемся на мультимедиа-клавишу.
+ВСЯ нативная работа со звуком и медиа вынесена в отдельный процесс
+(`mediactl.py`): Core Audio (pycaw/comtypes) для громкости и SMTC (winrt)
+для медиа. Причина — comtypes/pycaw, вызванные из пула потоков бота, дают
+access violation в _ctypes.pyd и роняют весь процесс; winrt на py3.14 тоже
+способен нативно упасть. Изоляция в дочерний процесс с таймаутом гарантирует,
+что никакой нативный сбой не может уронить или подвесить бот.
+
 TTS — через System.Speech, произвольные команды — через PowerShell."""
-import asyncio  # noqa: F401  (оставлено для совместимости импортов)
 import base64
-import ctypes
 import logging
 import os
 import subprocess
 import sys
-from ctypes import POINTER, cast
-
-from comtypes import CLSCTX_ALL, CoInitialize
-from pycaw.pycaw import (
-    AudioUtilities,
-    EDataFlow,
-    ERole,
-    IAudioEndpointVolume,
-)
 
 log = logging.getLogger("pc-control-bot")
 
 NO_WINDOW = 0x08000000
-KEYEVENTF_KEYUP = 0x0002
-KEYEVENTF_EXTENDEDKEY = 0x0001
-VOL_STEP = 0.02  # доля громкости (0..1) на один «шаг»
-
-_MEDIA_VK = {"play": 0xB3, "next": 0xB0, "prev": 0xB1}
 _HELPER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mediactl.py")
 
 
-# --- Громкость через Core Audio (pycaw) -----------------------------------
-def _endpoint():
-    CoInitialize()
-    enum = AudioUtilities.GetDeviceEnumerator()
-    dev = enum.GetDefaultAudioEndpoint(EDataFlow.eRender.value, ERole.eMultimedia.value)
-    ptr = dev.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-    return cast(ptr, POINTER(IAudioEndpointVolume))
-
-
-def _add_volume(delta: float) -> None:
+def _run(*args, timeout: int = 8) -> bool:
+    """Выполнить нативную операцию в изолированном процессе mediactl.py."""
     try:
-        v = _endpoint()
-        if v.GetMute():
-            v.SetMute(0, None)
-        new = min(1.0, max(0.0, v.GetMasterVolumeLevelScalar() + delta))
-        v.SetMasterVolumeLevelScalar(new, None)
+        r = subprocess.run(
+            [sys.executable, _HELPER, *args],
+            timeout=timeout,
+            creationflags=NO_WINDOW,
+        )
+        return r.returncode == 0
     except Exception:
-        log.exception("volume change failed")
+        log.exception("mediactl failed: %s", args)
+        return False
 
 
 def volume_up(steps: int = 4) -> None:
-    _add_volume(steps * VOL_STEP)
+    _run("volup", str(steps))
 
 
 def volume_down(steps: int = 4) -> None:
-    _add_volume(-steps * VOL_STEP)
+    _run("voldown", str(steps))
 
 
 def mute() -> None:
-    try:
-        v = _endpoint()
-        v.SetMute(0 if v.GetMute() else 1, None)
-    except Exception:
-        log.exception("mute toggle failed")
-
-
-# --- Медиа через SMTC в отдельном процессе, откат на мультимедиа-клавиши ---
-def _tap(vk: int) -> None:
-    ctypes.windll.user32.keybd_event(vk, 0, KEYEVENTF_EXTENDEDKEY, 0)
-    ctypes.windll.user32.keybd_event(vk, 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0)
-
-
-def _media(action: str) -> None:
-    ok = False
-    try:
-        r = subprocess.run(
-            [sys.executable, _HELPER, action],
-            timeout=8,
-            creationflags=NO_WINDOW,
-        )
-        ok = r.returncode == 0
-    except Exception:
-        log.exception("SMTC helper failed for %s", action)
-    if not ok:
-        _tap(_MEDIA_VK[action])
+    _run("mute")
 
 
 def media_playpause() -> None:
-    _media("play")
+    _run("play")
 
 
 def media_next() -> None:
-    _media("next")
+    _run("next")
 
 
 def media_prev() -> None:
-    _media("prev")
+    _run("prev")
 
 
 def speak(text: str) -> None:
