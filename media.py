@@ -1,61 +1,115 @@
 """Звук/медиа и запуск команд на Windows.
 
-ВСЯ нативная работа со звуком и медиа вынесена в отдельный процесс
-(`mediactl.py`): Core Audio (pycaw/comtypes) для громкости и SMTC (winrt)
-для медиа. Причина — comtypes/pycaw, вызванные из пула потоков бота, дают
-access violation в _ctypes.pyd и роняют весь процесс; winrt на py3.14 тоже
-способен нативно упасть. Изоляция в дочерний процесс с таймаутом гарантирует,
-что никакой нативный сбой не может уронить или подвесить бот.
+ГРОМКОСТЬ — через выделенный постоянный COM-поток (`_audio_worker`): endpoint
+Core Audio (pycaw/comtypes) создаётся один раз и живёт в этом же потоке, все
+запросы идут через очередь и обрабатываются последовательно. Так снимаются
+СРАЗУ две проблемы: (1) межпоточный COM у comtypes при вызове из пула потоков
+бота давал access violation 0xc0000005 в _ctypes.pyd и ронял процесс;
+(2) запуск тяжёлого Python-подпроцесса на каждый тап (импорт pycaw ~0.5 c)
+при мэшинге кнопок спайкал CPU и подвешивал event loop до таймаута Telegram.
+Теперь нажатие громкости — это мгновенный `queue.put`, никакого спавна.
+
+МЕДИА (play/pause/next/prev) — через System Media Transport Controls (winrt
+SMTC) в ИЗОЛИРОВАННОМ подпроцессе `mediactl.py` с таймаутом: winrt на py3.14
+может нативно упасть/зависнуть, изоляция не даёт уронить бот; жмут редко, так
+что стоимость запуска процесса не критична. Фолбэк — мультимедиа-клавиша.
 
 TTS — через System.Speech, произвольные команды — через PowerShell."""
 import base64
 import logging
 import os
+import queue
 import subprocess
 import sys
+import threading
 
 log = logging.getLogger("pc-control-bot")
 
 NO_WINDOW = 0x08000000
+VOL_STEP = 0.02  # доля громкости (0..1) на один «шаг»
 _HELPER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mediactl.py")
 
+# --- Громкость: единственный постоянный COM-поток -------------------------
+_MUTE = object()  # маркер операции «переключить mute» в очереди
+_audio_q: "queue.Queue" = queue.Queue()
 
-def _run(*args, timeout: int = 8) -> bool:
-    """Выполнить нативную операцию в изолированном процессе mediactl.py."""
-    try:
-        r = subprocess.run(
-            [sys.executable, _HELPER, *args],
-            timeout=timeout,
-            creationflags=NO_WINDOW,
-        )
-        return r.returncode == 0
-    except Exception:
-        log.exception("mediactl failed: %s", args)
-        return False
+
+def _build_endpoint():
+    import comtypes
+    from ctypes import POINTER, cast
+
+    from comtypes import CLSCTX_ALL
+    from pycaw.pycaw import (
+        AudioUtilities,
+        EDataFlow,
+        ERole,
+        IAudioEndpointVolume,
+    )
+
+    comtypes.CoInitialize()
+    enum = AudioUtilities.GetDeviceEnumerator()
+    dev = enum.GetDefaultAudioEndpoint(EDataFlow.eRender.value, ERole.eMultimedia.value)
+    return cast(dev.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None), POINTER(IAudioEndpointVolume))
+
+
+def _audio_worker():
+    vol = None
+    while True:
+        op = _audio_q.get()
+        for attempt in range(2):  # при сбое (сменилось устройство) пересоздаём endpoint
+            try:
+                if vol is None:
+                    vol = _build_endpoint()
+                if op is _MUTE:
+                    vol.SetMute(0 if vol.GetMute() else 1, None)
+                else:
+                    if vol.GetMute():
+                        vol.SetMute(0, None)
+                    new = min(1.0, max(0.0, vol.GetMasterVolumeLevelScalar() + op))
+                    vol.SetMasterVolumeLevelScalar(new, None)
+                break
+            except Exception:
+                log.exception("volume op failed (attempt %d)", attempt)
+                vol = None  # заставить пересоздать endpoint на второй попытке
+
+
+threading.Thread(target=_audio_worker, name="audio", daemon=True).start()
 
 
 def volume_up(steps: int = 4) -> None:
-    _run("volup", str(steps))
+    _audio_q.put(steps * VOL_STEP)
 
 
 def volume_down(steps: int = 4) -> None:
-    _run("voldown", str(steps))
+    _audio_q.put(-steps * VOL_STEP)
 
 
 def mute() -> None:
-    _run("mute")
+    _audio_q.put(_MUTE)
+
+
+# --- Медиа: изолированный подпроцесс mediactl.py --------------------------
+def _media(action: str) -> None:
+    try:
+        subprocess.run(
+            [sys.executable, _HELPER, action],
+            timeout=8,
+            creationflags=NO_WINDOW,
+        )
+    except Exception:
+        log.exception("mediactl failed: %s", action)
 
 
 def media_playpause() -> None:
-    _run("play")
+    _media("play")
 
 
 def media_next() -> None:
-    _run("next")
+    _media("next")
 
 
 def media_prev() -> None:
-    _run("prev")
+    _media("prev")
 
 
 def speak(text: str) -> None:
