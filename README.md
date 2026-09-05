@@ -6,7 +6,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white&style=for-the-badge)](requirements.txt)
 [![python-telegram-bot](https://img.shields.io/badge/python--telegram--bot-21.x-2CA5E0?logo=telegram&logoColor=white&style=for-the-badge)](requirements.txt)
-[![Windows](https://img.shields.io/badge/Windows-0078D6?logo=windows&logoColor=white&style=for-the-badge)](#requirements)
+[![Windows](https://img.shields.io/badge/Windows-0078D6?logo=windows&logoColor=white&style=for-the-badge)](#-setup-windows)
 [![psutil](https://img.shields.io/badge/psutil-system%20metrics-4B8BBE?style=for-the-badge)](requirements.txt)
 [![WSL2](https://img.shields.io/badge/WSL2-Docker%20status-E95420?logo=ubuntu&logoColor=white&style=for-the-badge)](#-features)
 
