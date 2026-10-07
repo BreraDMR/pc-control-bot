@@ -12,6 +12,10 @@
 
 </div>
 
+https://github.com/user-attachments/assets/24dd6589-e054-4bd3-9206-9f0bb5b8d87e
+
+<sub>A 22-second overview. The chat is the bot's own replies and buttons, recorded offline from its real handlers. The Windows-only calls (system metrics, the Docker list, the screenshot) are fed demo values. The file is also in <a href="docs/media/pc-control-bot-overview.mp4"><code>docs/media/pc-control-bot-overview.mp4</code></a>.</sub>
+
 A Telegram bot for remotely controlling a personal Windows PC — **everything via buttons**,
 no typed commands. It can shut down / reboot the machine, take a desktop screenshot and a
 webcam photo, show the status of Docker containers (running in WSL2), list top processes,
